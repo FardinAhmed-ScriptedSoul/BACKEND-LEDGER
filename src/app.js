@@ -1,7 +1,8 @@
 const express = require('express');
 const morgan = require('morgan');
-const authRouter = require('./routes/auth.routes.js')
+
 const cookieParser = require('cookie-parser')
+
 const app = express();
 
 // Global Request Middlewares
@@ -13,6 +14,14 @@ app.use(cookieParser());
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'OK', message: 'Server context is healthy' });
 });
+
+/**
+ * requiring routes
+ */
+const authRouter = require('./routes/auth.routes.js')
+const accountRouter = require('./routes/account.routes.js')
 // AUTH routes
 app.use("/api/auth",authRouter)
+// ACCOUNT routes
+app.use("/api/accounts",accountRouter)
 module.exports = app;
