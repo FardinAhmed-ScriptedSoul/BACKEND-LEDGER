@@ -7,9 +7,9 @@ async function connectDB(){
         const connectionInstance = await mongoose.connect(config.MONGO_URI);
         console.log(`✅ MongoDB Connection Established! Host Target: ${connectionInstance.connection.host}`);
 
-    }catch(error){
-        console.error("❌ MongoDB Connection Failure:', error.message")
-        process.exit(1);//// Gracefully kill the system process if database is unavailable
+    } catch (error) {
+        console.error(`❌ MongoDB Connection Failure: ${error.message}`);
+        process.exit(1); // Gracefully kill the system process if database is unavailable
     }
 }
 

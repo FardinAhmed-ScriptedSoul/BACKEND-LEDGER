@@ -21,28 +21,28 @@ const userSchema = new mongoose.Schema(
             required: [true, "Password is required for creating an account"],
             minlength: [6, "Password must contain at least 6 characters"],
             select: false 
-        }
+        },
+        tokenVersion: {
+        type: Number,
+        default: 0,
+        required: true
+    }
     },
     {
-        timestamps: true // Automatically manages createdAt and updatedAt date tags
+        timestamps: true 
     }
 );
 
 // Pre-save middleware hook to auto-hash passwords
-userSchema.pre("save", async function(next) {
-    // Fixed: Changed "this.modified" to "this.isModified"
+userSchema.pre("save", async function() {
+    
     if (!this.isModified("password")) {
-        return next(); // Skip hashing if the password field wasn't changed
+        return; // Skip hashing if the password field wasn't changed
     }
 
-    try {
-        // Automatically calculate salt strings and generate hash state asynchronously
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
-        return next();
-    } catch (error) {
-        return next(error); // Pass any unexpected system errors forward safely
-    }
+    // Automatically calculate salt strings and generate hash state asynchronously
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Instance method to check credential integrity during logins

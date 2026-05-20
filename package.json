@@ -22,10 +22,13 @@
   "homepage": "https://github.com/FardinAhmed-ScriptedSoul/BACKEND-LEDGER#readme",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.6.2",
     "morgan": "^1.10.1",
+    "nodemailer": "^8.0.7",
     "nodemon": "^3.1.14"
   }
 }
