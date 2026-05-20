@@ -1,10 +1,15 @@
-//fucntionality of this file => creating server instance + config server
-
 const express = require('express');
-const morgan = require('morgan')
-//creating server instance
+const morgan = require('morgan');
+
 const app = express();
-//middleware setup
-app.use(express.json())
-app.use(morgan('dev'))
-module.exports = app
+
+// Global Request Middlewares
+app.use(express.json());
+app.use(morgan('dev'));
+
+// Target Base Routes
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK', message: 'Server context is healthy' });
+});
+
+module.exports = app;
