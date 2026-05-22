@@ -7,7 +7,7 @@ async function createAccountController(req,res){
         const userId = req.user; 
         const account = await accountModel.create(
             {
-                user: userId, // Assuming req.user is the authenticated user object
+                user: userId, 
                
             }
         )

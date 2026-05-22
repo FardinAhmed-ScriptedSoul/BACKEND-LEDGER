@@ -37,10 +37,20 @@ const ledgerSchema = new mongoose.Schema(
     }
 );
 
+ledgerSchema.index({ account: 1, type: 1, amount: 1 });
 // Generic function handler for query mutations
 function preventLedgerModification(next) {
     return next(new Error("CRITICAL_ERROR: Ledger entries are immutable and cannot be modified or deleted after creation."));
 }
+
+// Enforce precision rounding before saving financial entries (Prevents floating-point JavaScript math bugs)
+ledgerSchema.pre("save", function (next) {
+    if (this.isNew && this.amount) {
+        // Rounds down to exactly two decimal places (e.g., 100.557 -> 100.56)
+        this.amount = Math.round(this.amount * 100) / 100;
+    }
+    next();
+});
 
 // === 1. Instance Level Guards (For model instances using .save() or .validate()) ===
 ledgerSchema.pre("save", function (next) {

@@ -61,9 +61,37 @@ async function sendLogoutAllEmail(userEmail, userName) {
     await sendEmail(userEmail, subject, text, html);
 }
 
+async function sendTransactionEmail(userEmail, userName, amount, toAccount) {
+  const subject = "Transaction Completed - Backend-Ledger";
+  const text = `Hi ${userName},\n\nYour transfer of ${amount} units to account ${toAccount} has been completed successfully. If you did not authorize this transaction, please contact support immediately.\n\nBest regards,\nThe Backend-Ledger Team`;
+  const html = `
+    <p>Hi ${userName},</p>
+    <p>Your transfer of <strong>${amount}</strong> units to account <strong>${toAccount}</strong> has been completed successfully.</p>
+    <p>If you did not authorize this transaction, please contact support immediately.</p>
+    <p>Best regards,<br>The Backend-Ledger Team</p>
+  `;
+
+  await sendEmail(userEmail, subject, text, html);
+}
+
+async function sendTransactionFailedEmail(userEmail,userName,amount,toAccount){
+  const subject = "Transaction Failed - Backend-Ledger";
+  const text = `Hi ${userName},\n\nWe're sorry but your transfer of ${amount} units to account ${toAccount} has failed. No funds were moved. Please try again or contact support if the problem persists.\n\nBest regards,\nThe Backend-Ledger Team`;
+  const html = `
+    <p>Hi ${userName},</p>
+    <p>We're sorry but your transfer of <strong>${amount}</strong> units to account <strong>${toAccount}</strong> has <strong>failed</strong>. No funds were moved.</p>
+    <p>Please try again, check your account status, or contact support if the problem persists.</p>
+    <p>Best regards,<br>The Backend-Ledger Team</p>
+  `;
+
+  await sendEmail(userEmail, subject, text, html);
+}
+
 module.exports = {
-    sendRegistrationEmail,
-    sendLogoutAllEmail 
+  sendRegistrationEmail,
+  sendLogoutAllEmail,
+  sendTransactionEmail,
+  sendTransactionFailedEmail,
 };
 
 

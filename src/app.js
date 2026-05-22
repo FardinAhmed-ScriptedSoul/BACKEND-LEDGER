@@ -18,10 +18,15 @@ app.get('/health', (req, res) => {
 /**
  * requiring routes
  */
-const authRouter = require('./routes/auth.routes.js')
-const accountRouter = require('./routes/account.routes.js')
+const authRouter = require('./routes/auth.routes.js');
+const accountRouter = require('./routes/account.routes.js');
+const transactionRouter = require('./routes/transaction.routes.js');
+
 // AUTH routes
-app.use("/api/auth",authRouter)
+app.use('/api/auth', authRouter);
 // ACCOUNT routes
-app.use("/api/accounts",accountRouter)
+app.use('/api/accounts', accountRouter);
+// TRANSACTION routes
+app.use('/api/transactions', transactionRouter);
+
 module.exports = app;
