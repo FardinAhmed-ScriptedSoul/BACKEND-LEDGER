@@ -152,6 +152,109 @@ async function createTransaction(req, res){
 
 }
 
+
+async function createInitialFundsTransaction(req,res){
+    const { toAccount, amount, idempotencyKey } = req.body;
+
+    if (!toAccount || !amount || !idempotencyKey) {
+        return res.status(400).json({ message: 'toAccount, amount and idempotencyKey are required' });
+    }
+
+    // Ensure target account exists
+    const toUserAccount = await accountModel.findById(toAccount);
+    if (!toUserAccount) {
+        return res.status(400).json({ message: 'Invalid toAccount' });
+    }
+
+    // The middleware guarantees req.user is the system user; find system user's account
+    const fromUserAccount = await accountModel.findOne({ user: req.user._id });
+    if (!fromUserAccount) {
+        return res.status(400).json({ message: 'System user account not found' });
+    }
+
+    // Prevent duplicate idempotent operations
+    if (idempotencyKey) {
+        const existing = await transactionModel.findOne({ idempotencyKey });
+        if (existing) {
+            return res.status(409).json({ message: 'A transaction with this idempotency key already exists', transaction: existing });
+        }
+    }
+
+    const session = await mongoose.startSession();
+    try {
+        console.log('[createInitialFundsTransaction] starting session');
+        session.startTransaction();
+
+        const transaction = new transactionModel({
+            fromAccount: fromUserAccount._id,
+            toAccount,
+            amount,
+            idempotencyKey,
+            status: 'PENDING'
+        });
+        console.log('[createInitialFundsTransaction] created transaction object, saving');
+        await transaction.save({ session });
+        console.log('[createInitialFundsTransaction] transaction saved', { transactionId: transaction._id.toString() });
+
+        const debitLedger = new ledgerModel({
+            account: fromUserAccount._id,
+            amount,
+            transaction: transaction._id,
+            type: 'DEBIT'
+        });
+        await debitLedger.save({ session });
+        console.log('[createInitialFundsTransaction] debit ledger saved', { debitLedgerId: debitLedger._id.toString() });
+
+        const creditLedger = new ledgerModel({
+            account: toAccount,
+            amount,
+            transaction: transaction._id,
+            type: 'CREDIT'
+        });
+        await creditLedger.save({ session });
+        console.log('[createInitialFundsTransaction] credit ledger saved', { creditLedgerId: creditLedger._id.toString() });
+
+        transaction.status = 'COMPLETED';
+        await transaction.save({ session });
+        console.log('[createInitialFundsTransaction] transaction status updated to COMPLETED');
+
+        await session.commitTransaction();
+        console.log('[createInitialFundsTransaction] session committed');
+
+        // Notify recipient (best-effort)
+        try {
+            const userModel = require('../models/user.model');
+            const recipient = await userModel.findById(toUserAccount.user);
+            if (recipient) {
+                emailService.sendTransactionEmail(recipient.email, recipient.name, amount, toAccount)
+                    .catch(e => console.error('Failed to send transaction email to recipient:', e));
+            }
+        } catch (e) {
+            console.error('Error while sending recipient email:', e);
+        }
+
+        return res.status(201).json({ message: 'Initial funds transferred successfully.', transaction });
+    } catch (err) {
+        try {
+            await session.abortTransaction();
+        } catch (abortErr) {
+            console.error('Failed to abort transaction session:', abortErr);
+        }
+
+        console.error('Initial funds transaction failed:', err);
+        // Notify system operator about failure (best-effort)
+        try {
+            emailService.sendTransactionFailedEmail(req.user.email, req.user.name, amount, toAccount)
+                .catch(e => console.error('Failed to send transaction-failed email:', e));
+        } catch (emailErr) {
+            console.error('Error invoking failed-email sender:', emailErr);
+        }
+
+        return res.status(500).json({ error: 'Initial funds transaction failed.', details: err.message });
+    } finally {
+        session.endSession();
+    }
+}
 module.exports = {
     createTransaction,
 }
