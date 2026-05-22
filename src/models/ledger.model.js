@@ -44,27 +44,24 @@ function preventLedgerModification(next) {
 }
 
 // Enforce precision rounding before saving financial entries (Prevents floating-point JavaScript math bugs)
-ledgerSchema.pre("save", function (next) {
+ledgerSchema.pre("save", function () {
     if (this.isNew && this.amount) {
         // Rounds down to exactly two decimal places (e.g., 100.557 -> 100.56)
         this.amount = Math.round(this.amount * 100) / 100;
     }
-    next();
 });
 
 // === 1. Instance Level Guards (For model instances using .save() or .validate()) ===
-ledgerSchema.pre("save", function (next) {
+ledgerSchema.pre("save", function () {
     if (!this.isNew) {
-        return next(new Error("CRITICAL_ERROR: Existing ledger document objects cannot be resaved."));
+        throw new Error("CRITICAL_ERROR: Existing ledger document objects cannot be resaved.");
     }
-    next();
 });
 
-ledgerSchema.pre("validate", function (next) {
+ledgerSchema.pre("validate", function () {
     if (!this.isNew) {
-        return next(new Error("CRITICAL_ERROR: Existing ledger document objects cannot be revalidated."));
+        throw new Error("CRITICAL_ERROR: Existing ledger document objects cannot be revalidated.");
     }
-    next();
 });
 
 // === 2. Query Mutation Guards ===

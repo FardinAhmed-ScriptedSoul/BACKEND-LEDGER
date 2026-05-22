@@ -73,4 +73,27 @@ async function authMiddleware(req, res, next) {
     }
 }
 
-module.exports = { protect, authMiddleware };
+async function authSystemUserMiddleware(req,res,next){
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ message: "Unauthorized access, token missing" });
+    }
+
+    try {
+        const decoded = jwt.verify(token, config.JWT_SECRET);
+        const user = await userModel.findById(decoded.userId).select('+systemUser');
+        if (!user || !user.systemUser) {
+            return res.status(403).json({ message: 'Forbidden: This route is only for system users' });
+        }
+
+        req.user = user;
+        return next();
+    } catch (error) {
+        console.error('❌ authSystemUserMiddleware error:', error);
+        return res.status(401).json({ message: 'Unauthorized access: token missing or invalid' });
+    }
+
+}
+
+module.exports = { protect, authMiddleware, authSystemUserMiddleware  };
