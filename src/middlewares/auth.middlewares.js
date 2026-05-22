@@ -27,9 +27,9 @@ async function protect(req, res, next) {
         console.log(`🔍 DB Version: ${currentDbVersion} | Token Version: ${currentTokenVersion}`);
 
         if (currentDbVersion !== currentTokenVersion) {
-            return res.status(401).json({ 
-                status: "failed", 
-                message: "Session expired or invalidated. Please login again." 
+            return res.status(401).json({
+                status: "failed",
+                message: "Session expired or invalidated. Please login again."
             });
         }
 
@@ -42,4 +42,35 @@ async function protect(req, res, next) {
     }
 }
 
-module.exports = { protect };
+async function authMiddleware(req, res, next) {
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+
+    if (!token) {
+        return res.status(401).json(
+            {
+                status: "failed", message: "Not authorized, token missing"
+            }
+        );
+    }
+
+    try{
+        const decoded = jwt.verify(token,config.JWT_SECRET);
+        const user = await userModel.findById(decoded.userId);
+        if(!user){
+            return res.status(401).json({ status: "failed", message: "User no longer exists" });
+        }
+        
+        // Fallback normalization for tokenVersion
+        const currentDbVersion = user.tokenVersion !== undefined ? user.tokenVersion : 0;
+        const currentTokenVersion = decoded.tokenVersion !== undefined ? decoded.tokenVersion : 0;
+
+        req.user = user;
+        next();
+
+    }catch(error){
+        console.error("❌ Auth Middleware Error:", error);
+        return res.status(401).json({ status: "failed", message: "Not authorized, invalid token" });
+    }
+}
+
+module.exports = { protect, authMiddleware };
