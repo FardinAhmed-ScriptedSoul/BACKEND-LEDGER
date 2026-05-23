@@ -1,13 +1,25 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config/config.js');
 const userModel = require('../models/user.model.js');
+const tokenBlackListModel = require('../models/blackList.model.js');
 
 async function protect(req, res, next) {
     try {
-        let token = req.cookies.token;
+        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
         if (!token) {
             return res.status(401).json({ status: "failed", message: "Not authorized, token missing" });
+        }
+
+        //blacklisted check
+        const isBlackListed = await tokenBlackListModel.findOne({ token });
+        if(isBlackListed){
+            return res.status(401)
+            .json(
+                {
+                    message:"Unauthorized token is invalid"
+                }
+            )
         }
 
         // 1. Decode the token payload
@@ -53,6 +65,22 @@ async function authMiddleware(req, res, next) {
         );
     }
 
+    //blacklisted check
+
+        const isBlackListed = await tokenBlackListModel.findOne(
+            {
+                token
+            }
+        )
+        if(isBlackListed){
+            return res.status(401)
+            .json(
+                {
+                    message:"Unauthorized token is invalid"
+                }
+            )
+        }
+
     try{
         const decoded = jwt.verify(token,config.JWT_SECRET);
         const user = await userModel.findById(decoded.userId);
@@ -79,6 +107,22 @@ async function authSystemUserMiddleware(req,res,next){
     if (!token) {
         return res.status(401).json({ message: "Unauthorized access, token missing" });
     }
+
+    //blacklisted check
+
+        const isBlackListed = await tokenBlackListModel.findOne(
+            {
+                token
+            }
+        )
+        if(isBlackListed){
+            return res.status(401)
+            .json(
+                {
+                    message:"Unauthorized token is invalid"
+                }
+            )
+        }
 
     try {
         const decoded = jwt.verify(token, config.JWT_SECRET);

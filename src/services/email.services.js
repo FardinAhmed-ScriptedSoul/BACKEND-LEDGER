@@ -12,14 +12,16 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Verify the connection configuration
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('Error connecting to email server:', error);
-  } else {
-    console.log('Email server is ready to send messages');
-  }
-});
+// Verify the connection configuration unless the process is running under tests
+if (process.env.NODE_ENV !== 'test') {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('Error connecting to email server:', error);
+    } else {
+      console.log('Email server is ready to send messages');
+    }
+  });
+}
 
 
 // Function to send email

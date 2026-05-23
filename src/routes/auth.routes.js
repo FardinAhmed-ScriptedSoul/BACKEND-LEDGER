@@ -23,4 +23,9 @@ router.post("/logout", protect, authController.userLogoutController);
  */
 router.post("/logout-all", protect, authController.userLogoutAllController);
 
+
+/**
+ * POST /api/auth/logout/blacklist
+ */
+router.post("/logout/blacklist",protect,authController.userLogoutBlacklistToken)
 module.exports = router;

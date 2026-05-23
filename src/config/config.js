@@ -12,7 +12,8 @@ const config = {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     REFRESH_TOKEN: process.env.REFRESH_TOKEN,
-    EMAIL_USER: process.env.EMAIL_USER
+    EMAIL_USER: process.env.EMAIL_USER,
+    TEST_DELAY_MS:process.env.TEST_DELAY_MS
 }
 
 //All the FAIL-FIRST check

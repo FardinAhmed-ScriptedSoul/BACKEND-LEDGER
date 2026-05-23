@@ -2,7 +2,7 @@ const userModel = require('../models/user.model.js');
 const config = require('../config/config.js');
 const jwt = require('jsonwebtoken');
 const emailServices = require('../services/email.services.js');
-
+const tokenBlackListModel = require('../models/blackList.model.js');
 /**
  * User register controller
  * @param {*} req 
@@ -176,6 +176,35 @@ async function userLogoutController(req, res) {
 }
 
 /**
+ * user logout and token is blacklisted
+ * @param {*} req
+ * @param {*} res
+ * @route POST /api/auth/logout/blacklist
+ */
+
+async function userLogoutBlacklistToken(req, res) {
+    try {
+        const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(400).json({ message: "User does not have a token; you are already logged out." });
+        }
+
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'strict'
+        });
+
+        await tokenBlackListModel.create({ token });
+
+        return res.status(200).json({ status: 'success', message: 'User logged out successfully and token blacklisted.' });
+    } catch (error) {
+        console.error('❌ Logout Blacklist Controller Error:', error);
+        return res.status(500).json({ status: 'error', message: 'Failed to blacklist token during logout.' });
+    }
+}
+
+/**
  * User logout from all devices controller
  * @param {*} req 
  * @param {*} res
@@ -213,6 +242,7 @@ module.exports = {
     userRegisterController,
     userLoginController,
     userLogoutController,
-    userLogoutAllController
+    userLogoutAllController,
+    userLogoutBlacklistToken
 };
 

@@ -22,7 +22,7 @@
  * 
  
  */
-
+const config = require('../config/config.js')
 const transactionModel = require('../models/transaction.model');
 const ledgerModel = require('../models/ledger.model');
 const accountModel = require('../models/account.model');
@@ -53,7 +53,7 @@ async function createTransaction(req, res){
         if(isTransactionAlreadyExists.status === "COMPLETED"){
             return res.status(200).json({ message: "Transaction already completed.", transaction: isTransactionAlreadyExists });
         } else if(isTransactionAlreadyExists.status === "PENDING"){
-            return res.status(409).json({ error: "A transaction with the same idempotency key is already in progress." });
+            return res.status(409).json({ error: "This transaction is on the way.", transaction: isTransactionAlreadyExists });
         } else if(isTransactionAlreadyExists.status === "FAILED"){
             return res.status(500).json({ error: "A transaction with the same idempotency key has failed." });
         } else if(isTransactionAlreadyExists.status === "REVERSED"){
@@ -86,20 +86,24 @@ async function createTransaction(req, res){
    }
 
    // 6. Create Transanction(pending)
+   const transaction = await transactionModel.create({
+       fromAccount: fromAccountId,
+       toAccount: toAccountId,
+       amount,
+       idempotencyKey,
+       status: "PENDING"
+   });
+
+   // optional test delay to create a race window after the transaction is marked PENDING.
+   const parsedDelay = Number(process.env.TEST_DELAY_MS);
+   const testDelay = Number.isFinite(parsedDelay) ? Math.min(Math.max(parsedDelay, 0), 5000) : 100;
+   if (testDelay > 0) {
+       await new Promise(resolve => setTimeout(resolve, testDelay));
+   }
 
    const session = await mongoose.startSession();
    try {
        session.startTransaction();
-
-       const [transaction] = await transactionModel.create([
-           {
-               fromAccount: fromAccountId,
-               toAccount: toAccountId,
-               amount,
-               idempotencyKey,
-               status: "PENDING"
-           }
-       ], { session });
 
        await ledgerModel.create([
            {
@@ -134,6 +138,14 @@ async function createTransaction(req, res){
            await session.abortTransaction();
        } catch (abortErr) {
            console.error('Failed to abort transaction session:', abortErr);
+       }
+
+       if (transaction && transaction._id) {
+           try {
+               await transactionModel.findByIdAndUpdate(transaction._id, { status: 'FAILED' });
+           } catch (updateErr) {
+               console.error('Failed to mark transaction as FAILED after abort:', updateErr);
+           }
        }
 
        console.error('Transaction failed:', err);
