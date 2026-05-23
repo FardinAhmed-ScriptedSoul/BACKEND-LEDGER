@@ -1,4 +1,5 @@
-const accountModel = require('../models/account.model.js')
+const accountModel = require('../models/account.model.js');
+const logger = require('../utils/logger.js');
 
 //creating a new account for a user
 
@@ -10,11 +11,11 @@ async function createAccountController(req,res){
                 user: userId, 
                
             }
-        )
-        res.status(201).json({ status: "success", data: account });
+        );
+        res.status(201).json({ status: 'success', data: account });
     }catch(error){
-        console.error("Error creating account:", error);
-        res.status(500).json({ status: "failed", message: "An error occurred while creating the account" });
+        logger.error('Error creating account', error);
+        res.status(500).json({ status: 'failed', message: 'An error occurred while creating the account' });
     }
 }
 

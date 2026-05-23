@@ -1,6 +1,7 @@
 const userModel = require('../models/user.model.js');
 const config = require('../config/config.js');
-const jwt = require('jsonwebtoken');
+const tokenManager = require('../utils/tokenManager.js');
+const logger = require('../utils/logger.js');
 const emailServices = require('../services/email.services.js');
 const tokenBlackListModel = require('../models/blackList.model.js');
 /**
@@ -39,18 +40,12 @@ async function userRegisterController(req, res) {
             name
         });
 
-        // Generate the JWT access token 
-        const token = jwt.sign(
-            { userId: user._id },
-            config.JWT_SECRET,
-            { expiresIn: "3d" }
-        );
+        const token = tokenManager.generateToken(user._id);
 
-        // Set secure cookie with the token
-        res.cookie("token", token, {
+        res.cookie('token', token, {
             httpOnly: true,
-            secure: true, 
-            sameSite: "strict",
+            secure: config.COOKIE_SECURE,
+            sameSite: 'strict',
             maxAge: 3 * 24 * 60 * 60 * 1000 // 3 days in milliseconds
         });
 
@@ -58,10 +53,10 @@ async function userRegisterController(req, res) {
         // By omitting 'await', it runs in the background asynchronously without delaying the API response!
         emailServices.sendRegistrationEmail(user.email, user.name)
             .then(() => {
-                console.log(`📧 Welcome email sent successfully to ${user.email}`);
+                logger.info(`Welcome email sent`, { email: user.email });
             })
             .catch((emailError) => {
-                console.error(`❌ Failed to send welcome email to ${user.email}:`, emailError);
+                logger.error(`Failed to send welcome email`, emailError);
             });
 
         // Final HTTP Response exit point
@@ -76,10 +71,10 @@ async function userRegisterController(req, res) {
         });
         
     } catch (error) {
-        console.error("❌ Registration Controller Error:", error);
+        logger.error('Registration controller error', error);
         return res.status(500).json({
-            status: "error",
-            message: "Internal server error encountered during registration"
+            status: 'error',
+            message: 'Internal server error encountered during registration'
         });
     }
 }
@@ -119,16 +114,11 @@ async function userLoginController(req,res){
             });
         }
         // 5. Generate JWT token upon successful authentication
-        const token = jwt.sign(
-            { userId: user._id },
-            config.JWT_SECRET,
-            { expiresIn: "3d" }
-        );
-        // 6. Set secure cookie with the token
-        res.cookie("token", token, {
+        const token = tokenManager.generateToken(user._id);
+        res.cookie('token', token, {
             httpOnly: true,
-            secure: true, 
-            sameSite: "strict",
+            secure: config.COOKIE_SECURE,
+            sameSite: 'strict',
             maxAge: 3 * 24 * 60 * 60 * 1000 // 3 days in milliseconds
         });
         // 7. Respond with user info and token
@@ -141,11 +131,11 @@ async function userLoginController(req,res){
             },
             token
         });
-    }catch(error){
-        console.error("❌ Login Controller Error:", error);
+    } catch (error) {
+        logger.error('Login controller error', error);
         return res.status(500).json({
-            status: "error",
-            message: "Internal server error encountered during login"
+            status: 'error',
+            message: 'Internal server error encountered during login'
         });
     }
 }
@@ -159,19 +149,19 @@ async function userLoginController(req,res){
 async function userLogoutController(req, res) {
     try {
         // Just clear the HTTP cookie cache context from the requesting device
-        res.clearCookie("token", {
+        res.clearCookie('token', {
             httpOnly: true,
-            secure: true,
-            sameSite: "strict"
+            secure: config.COOKIE_SECURE,
+            sameSite: 'strict'
         });
 
         return res.status(200).json({
-            status: "success",
-            message: "Logged out successfully from this device."
+            status: 'success',
+            message: 'Logged out successfully from this device.'
         });
     } catch (error) {
-        console.error("❌ Logout Controller Error:", error);
-        return res.status(500).json({ status: "error", message: "Error during logout process" });
+        logger.error('Logout controller error', error);
+        return res.status(500).json({ status: 'error', message: 'Error during logout process' });
     }
 }
 
@@ -191,7 +181,7 @@ async function userLogoutBlacklistToken(req, res) {
 
         res.clearCookie('token', {
             httpOnly: true,
-            secure: true,
+            secure: config.COOKIE_SECURE,
             sameSite: 'strict'
         });
 
@@ -199,7 +189,7 @@ async function userLogoutBlacklistToken(req, res) {
 
         return res.status(200).json({ status: 'success', message: 'User logged out successfully and token blacklisted.' });
     } catch (error) {
-        console.error('❌ Logout Blacklist Controller Error:', error);
+        logger.error('Logout blacklist controller error', error);
         return res.status(500).json({ status: 'error', message: 'Failed to blacklist token during logout.' });
     }
 }
@@ -217,24 +207,24 @@ async function userLogoutAllController(req, res) {
         await req.user.save();
 
         // 2. Wipe cookie on this device
-        res.clearCookie("token", {
+        res.clearCookie('token', {
             httpOnly: true,
-            secure: true,
-            sameSite: "strict"
+            secure: config.COOKIE_SECURE,
+            sameSite: 'strict'
         });
 
         // 3. Fire security notice email out background channel asynchronously
         emailServices.sendLogoutAllEmail(req.user.email, req.user.name)
-            .then(() => console.log(`📧 Device eviction notification sent to ${req.user.email}`))
-            .catch((err) => console.error(`❌ Logout notification email failure:`, err));
+            .then(() => logger.info('Device eviction notification sent', { email: req.user.email }))
+            .catch((err) => logger.error('Logout notification email failure', err));
 
         return res.status(200).json({
             status: "success",
             message: "Logged out from all active devices successfully. Notice email dispatched."
         });
     } catch (error) {
-        console.error("❌ Logout All Controller Error:", error);
-        return res.status(500).json({ status: "error", message: "Error during comprehensive session reset" });
+        logger.error('Logout all controller error', error);
+        return res.status(500).json({ status: 'error', message: 'Error during comprehensive session reset' });
     }
 }
 

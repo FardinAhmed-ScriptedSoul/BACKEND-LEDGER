@@ -178,6 +178,6 @@ describe('Transaction API', () => {
       .send({ amount: 60, fromAccountId: fromAccount._id, toAccountId: toAccount._id, idempotencyKey: 'transfer-2' });
 
     expect(transferRes.status).to.equal(400);
-    expect(transferRes.body).to.have.property('message').that.includes('Insufficient Funds');
+    expect(transferRes.body).to.have.property('error').that.includes('Insufficient Funds');
   });
 });
